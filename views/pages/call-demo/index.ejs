@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Get started with Voice Calling</title>
+
+  <script src="https://download.agora.io/sdk/release/AgoraRTC_N-4.18.0.js"></script>
+</head>
+
+<body>
+  <h2 class="left-align">Get started with Voice Calling</h2>
+  <div class="row">
+    <div>
+      <button type="button" id="join">Join</button>
+      <button type="button" id="leave">Leave</button>
+    </div>
+  </div>
+  <br>
+  <div id="message"></div>
+</body>
+
+<script>
+  // JavaScript Speech Recognition Init
+  // Check if browser supports the Web Speech API
+
+  let user = "<%= userId %>";
+
+  const recognition = new(window.SpeechRecognition || window.webkitSpeechRecognition)();
+
+  // Set the properties
+  recognition.lang = 'en-US'; // Set the language
+  recognition.continuous = true; // Enable continuous listening
+
+  // Event fired when the speech recognition starts
+  recognition.onstart = () => {
+    console.log('Speech recognition started...');
+  };
+
+  // Event fired when the speech recognition stops
+  recognition.onend = () => {
+    console.log('Speech recognition stopped.');
+  };
+
+  recognition.onspeechend = () => {
+    console.log("speech end");
+  }
+
+  recognition.onaudioend = () => {
+    console.log("Audio end")
+  }
+
+  recognition.onnomatch = () => {
+    console.log("No match")
+  }
+
+  // Event fired when a result is received
+  recognition.onresult = (event) => {
+    const transcript = event.results[event.results.length - 1][0].transcript;
+    console.log('Transcript:', transcript);
+
+    fetch("/call-demo/publish-socket", {
+      method: "POST",
+      body: JSON.stringify({
+        data: {
+          user: user,
+          message: transcript
+        }
+      }),
+      headers: {
+        "Content-type": "application/json"
+      }
+    });
+    // Here, you can perform any further processing with the transcript
+  };
+
+  // Event fired when an error occurs
+  recognition.onerror = (event) => {
+    console.error('Speech recognition error:', event.error);
+  };
+
+  function startSpeechRecognisation() {
+    if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
+      // Start the speech recognition
+      recognition.start();
+    } else {
+      console.error('Speech recognition is not supported in this browser.');
+    }
+  }
+
+  function stopSpeechRecognisation() {
+    if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
+      // Create a new instance of SpeechRecognition
+
+      // Event fired when an error occurs
+      recognition.onerror = (event) => {
+        console.error('Speech recognition error:', event.error);
+      };
+      // Start the speech recognition
+      recognition.stop();
+    } else {
+      console.error('Speech recognition is not supported in this browser.');
+    }
+  }
+
+
+  let options = {
+    // Pass your App ID here.
+    appId: '13696f494c8441f8b3f88fe0afcd940e',
+    // Set the channel name.
+    channel: 'voicedemo',
+    // Pass your temp token here.
+    token: '007eJxTYHBLPCBcmupVx3Z6Y98Rh3qX2b7S56/ZLjpYuTQ3f7rjtHYFBkNjM0uzNBNLk2QLExPDNIsk4zQLi7RUg8S05BRLE4PUmr3zUhoCGRkaOYUZGRkgEMTnZCjLz0xOTUnNzWdgAACtKiCI',
+    // Set the user ID.
+    uid: "<%= userId %>",
+  };
+
+  let channelParameters = {
+    // A variable to hold a local audio track.
+    localAudioTrack: null,
+    // A variable to hold a remote audio track.
+    remoteAudioTrack: null,
+    // A variable to hold the remote user id.
+    remoteUid: null,
+  };
+  async function startBasicCall() {
+    // Create an instance of the Agora Engine
+    const agoraEngine = AgoraRTC.createClient({
+      mode: "rtc",
+      codec: "vp9"
+    });
+
+    // Listen for the "user-published" event to retrieve an AgoraRTCRemoteUser object.
+    agoraEngine.on("user-published", async (user, mediaType) => {
+      // Subscribe to the remote user when the SDK triggers the "user-published" event.
+      await agoraEngine.subscribe(user, mediaType);
+      console.log("subscribe success");
+
+      // Subscribe and play the remote audio track.
+      if (mediaType == "audio") {
+        channelParameters.remoteUid = user.uid;
+        // Get the RemoteAudioTrack object from the AgoraRTCRemoteUser object.
+        channelParameters.remoteAudioTrack = user.audioTrack;
+        // Play the remote audio track. 
+        channelParameters.remoteAudioTrack.play();
+        showMessage("Remote user connected: " + user.uid);
+      }
+
+      // Listen for the "user-unpublished" event.
+      agoraEngine.on("user-unpublished", user => {
+        console.log(user.uid + "has left the channel");
+        showMessage("Remote user has left the channel");
+      });
+    });
+
+    window.onload = function() {
+      // Listen to the Join button click event.
+      document.getElementById("join").onclick = async function() {
+        // Join a channel.
+        await agoraEngine.join(options.appId, options.channel, options.token, options.uid);
+        showMessage("Joined channel: " + options.channel);
+        // Create a local audio track from the microphone audio.
+        channelParameters.localAudioTrack = await AgoraRTC.createMicrophoneAudioTrack();
+        // Publish the local audio track in the channel.
+        await agoraEngine.publish(channelParameters.localAudioTrack);
+        console.log("Publish success!");
+        startSpeechRecognisation();
+      }
+
+      // Listen to the Leave button click event.
+      document.getElementById('leave').onclick = async function() {
+        // Destroy the local audio track.
+        channelParameters.localAudioTrack.close();
+        // Leave the channel
+        await agoraEngine.leave();
+        console.log("You left the channel");
+        // Refresh the page for reuse
+        window.location.reload();
+        stopSpeechRecognisation();
+      }
+    }
+  }
+
+  function showMessage(text) {
+    document.getElementById("message").textContent = text;
+  }
+
+  startBasicCall();
+</script>
+
+</html>
