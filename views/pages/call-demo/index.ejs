@@ -5,7 +5,9 @@
   <meta charset="UTF-8">
   <title>Get started with Voice Calling</title>
 
+  <script type="text/javascript" src="/dependencies/sails.io.js"></script>
   <script src="https://download.agora.io/sdk/release/AgoraRTC_N-4.18.0.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@speechly/browser-client@2.6.5/core/speechly.umd.min.js" integrity="sha256-T6GnZqWX4692g/IrOZ3bwgKwQ5UzPNss05rjsX2kcvU=" crossorigin="anonymous"></script>
 </head>
 
 <body>
@@ -15,94 +17,77 @@
       <button type="button" id="join">Join</button>
       <button type="button" id="leave">Leave</button>
     </div>
+    <div id="transcripts"></div>
+    <p id="tentative"></p>
   </div>
   <br>
   <div id="message"></div>
 </body>
 
-<script>
-  // JavaScript Speech Recognition Init
-  // Check if browser supports the Web Speech API
+<script type="module">
+  startRecording();
 
-  let user = "<%= userId %>";
+  let user = '<%= userId %>'
 
-  const recognition = new(window.SpeechRecognition || window.webkitSpeechRecognition)();
-
-  // Set the properties
-  recognition.lang = 'en-US'; // Set the language
-  recognition.continuous = true; // Enable continuous listening
-
-  // Event fired when the speech recognition starts
-  recognition.onstart = () => {
-    console.log('Speech recognition started...');
-  };
-
-  // Event fired when the speech recognition stops
-  recognition.onend = () => {
-    console.log('Speech recognition stopped.');
-  };
-
-  recognition.onspeechend = () => {
-    console.log("speech end");
-  }
-
-  recognition.onaudioend = () => {
-    console.log("Audio end")
-  }
-
-  recognition.onnomatch = () => {
-    console.log("No match")
-  }
-
-  // Event fired when a result is received
-  recognition.onresult = (event) => {
-    const transcript = event.results[event.results.length - 1][0].transcript;
-    console.log('Transcript:', transcript);
-
-    fetch("/call-demo/publish-socket", {
-      method: "POST",
-      body: JSON.stringify({
-        data: {
-          user: user,
-          message: transcript
-        }
-      }),
-      headers: {
-        "Content-type": "application/json"
+  function startRecording(params) {
+    navigator.mediaDevices.getUserMedia({
+      audio: true
+    }).then((stream) => {
+      console.log({
+        stream
+      })
+      if (!MediaRecorder.isTypeSupported('audio/webm'))
+        return alert('Browser not supported')
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType: 'audio/webm',
+      })
+      const socket = new WebSocket('wss://api.deepgram.com/v1/listen', [
+        'token',
+        '94508779e802ad285aee9c7468235ee39bab7989',
+      ])
+      socket.onopen = () => {
+        // document.querySelector('#status').textContent = 'Connected'
+        console.log({
+          event: 'onopen'
+        })
+        mediaRecorder.addEventListener('dataavailable', async (event) => {
+          console.log("test", event.data);
+          if (event.data.size > 0 && socket.readyState == 1) {
+            socket.send(event.data)
+          }
+        })
+        mediaRecorder.start(1000)
       }
-    });
-    // Here, you can perform any further processing with the transcript
-  };
 
-  // Event fired when an error occurs
-  recognition.onerror = (event) => {
-    console.error('Speech recognition error:', event.error);
-  };
+      socket.onmessage = (message) => {
+        const received = JSON.parse(message.data)
+        const transcript = received.channel.alternatives[0].transcript
+        if (transcript && received.is_final) {
+          console.log(transcript)
+          // document.querySelector('#transcript').textContent += transcript + ' '
 
-  function startSpeechRecognisation() {
-    if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
-      // Start the speech recognition
-      recognition.start();
-    } else {
-      console.error('Speech recognition is not supported in this browser.');
-    }
+          if (document.getElementById(`${user}`)) {
+            document.getElementById(`${user}`).innerHTML += transcript + ' ';
+          } else {
+            document.getElementById("transcripts").innerHTML += `<div><label>${user}</label>: <p id="${user}">${transcript}</p></div>`
+          }
+        }
+      }
+
+      socket.onclose = () => {
+        console.log({
+          event: 'onclose'
+        })
+      }
+
+      socket.onerror = (error) => {
+        console.log({
+          event: 'onerror',
+          error
+        })
+      }
+    })
   }
-
-  function stopSpeechRecognisation() {
-    if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
-      // Create a new instance of SpeechRecognition
-
-      // Event fired when an error occurs
-      recognition.onerror = (event) => {
-        console.error('Speech recognition error:', event.error);
-      };
-      // Start the speech recognition
-      recognition.stop();
-    } else {
-      console.error('Speech recognition is not supported in this browser.');
-    }
-  }
-
 
   let options = {
     // Pass your App ID here.
@@ -110,7 +95,7 @@
     // Set the channel name.
     channel: 'voicedemo',
     // Pass your temp token here.
-    token: '007eJxTYHBLPCBcmupVx3Z6Y98Rh3qX2b7S56/ZLjpYuTQ3f7rjtHYFBkNjM0uzNBNLk2QLExPDNIsk4zQLi7RUg8S05BRLE4PUmr3zUhoCGRkaOYUZGRkgEMTnZCjLz0xOTUnNzWdgAACtKiCI',
+    token: '007eJxTYJheMD9bRfzeDvtAM+WMr8U77cy2Kn+eWuc2Kaef8YVE0l8FBkNjM0uzNBNLk2QLExPDNIsk4zQLi7RUg8S05BRLE4NUbZEVKQ2BjAylSlXMjAwQCOJzMpTlZyanpqTm5jMwAACBix+9',
     // Set the user ID.
     uid: "<%= userId %>",
   };
@@ -141,6 +126,8 @@
         channelParameters.remoteUid = user.uid;
         // Get the RemoteAudioTrack object from the AgoraRTCRemoteUser object.
         channelParameters.remoteAudioTrack = user.audioTrack;
+
+        console.log('check', user.audioTrack);
         // Play the remote audio track. 
         channelParameters.remoteAudioTrack.play();
         showMessage("Remote user connected: " + user.uid);
@@ -164,7 +151,7 @@
         // Publish the local audio track in the channel.
         await agoraEngine.publish(channelParameters.localAudioTrack);
         console.log("Publish success!");
-        startSpeechRecognisation();
+        startRecording();
       }
 
       // Listen to the Leave button click event.
@@ -176,7 +163,6 @@
         console.log("You left the channel");
         // Refresh the page for reuse
         window.location.reload();
-        stopSpeechRecognisation();
       }
     }
   }
