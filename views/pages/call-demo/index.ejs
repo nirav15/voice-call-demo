@@ -13,7 +13,12 @@
 <body>
   <h2 class="left-align">Get started with Voice Calling</h2>
   <div class="row">
-    <div>
+    <select id="mySelect" style="margin:10px 0px">
+      <option value="en" selected>English</option>
+      <option value="hi">Hindi</option>
+      <option value="fr">Franch</option>
+    </select>
+    <div style="margin:10px 0px">
       <button type="button" id="join">Join</button>
       <button type="button" id="leave">Leave</button>
     </div>
@@ -25,9 +30,19 @@
 </body>
 
 <script type="module">
-  startRecording();
+  // startRecording();
 
   let user = '<%= userId %>'
+const selectElement = document.getElementById("mySelect");
+
+  var selectedLan = "en";
+
+  selectElement.addEventListener("change", function () {
+  selectedLan = this.value;
+  console.log(selectedLan);
+  // Perform further actions with the selected value
+});
+
 
   function startRecording(params) {
     navigator.mediaDevices.getUserMedia({
@@ -41,7 +56,7 @@
       const mediaRecorder = new MediaRecorder(stream, {
         mimeType: 'audio/webm',
       })
-      const socket = new WebSocket('wss://api.deepgram.com/v1/listen', [
+      const socket = new WebSocket(`wss://api.deepgram.com/v1/listen?language=${selectedLan}`, [
         'token',
         '94508779e802ad285aee9c7468235ee39bab7989',
       ])
@@ -128,7 +143,7 @@
         channelParameters.remoteAudioTrack = user.audioTrack;
 
         console.log('check', user.audioTrack);
-        // Play the remote audio track. 
+        // Play the remote audio track.
         channelParameters.remoteAudioTrack.play();
         showMessage("Remote user connected: " + user.uid);
       }
