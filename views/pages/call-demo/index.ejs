@@ -1,192 +1,281 @@
 <!DOCTYPE html>
 <html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Get started with Voice Calling</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css"
+      integrity="sha384-rbsA2VBKQhggwzxH7pPCaAqO46MgnOM80zW1RWuH61DGLwZJEdK2Kadq2F9CUG65"
+      crossorigin="anonymous"
+    />
 
-<head>
-  <meta charset="UTF-8">
-  <title>Get started with Voice Calling</title>
+    <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.min.js"
+      integrity="sha384-cuYeSxntonz0PPNlHhBs68uyIAVpIIOZZ5JqeqvYYIcEL727kskC66kF92t6Xl2V"
+      crossorigin="anonymous"
+    ></script>
 
-  <script type="text/javascript" src="/dependencies/sails.io.js"></script>
-  <script src="https://download.agora.io/sdk/release/AgoraRTC_N-4.18.0.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@speechly/browser-client@2.6.5/core/speechly.umd.min.js" integrity="sha256-T6GnZqWX4692g/IrOZ3bwgKwQ5UzPNss05rjsX2kcvU=" crossorigin="anonymous"></script>
-</head>
+    <script type="text/javascript" src="/dependencies/sails.io.js"></script>
+    <script src="https://download.agora.io/sdk/release/AgoraRTC_N-4.18.0.js"></script>
+    <script
+      src="https://cdn.jsdelivr.net/npm/@speechly/browser-client@2.6.5/core/speechly.umd.min.js"
+      integrity="sha256-T6GnZqWX4692g/IrOZ3bwgKwQ5UzPNss05rjsX2kcvU="
+      crossorigin="anonymous"
+    ></script>
+  </head>
 
-<body>
-  <h2 class="left-align">Get started with Voice Calling</h2>
-  <div class="row">
-    <select id="mySelect" style="margin:10px 0px">
-      <option value="en" selected>English</option>
-      <option value="hi">Hindi</option>
-      <option value="fr">Franch</option>
-    </select>
-    <div style="margin:10px 0px">
-      <button type="button" id="join">Join</button>
-      <button type="button" id="leave">Leave</button>
+  <body>
+    <div class="container">
+      <div class="row my-5">
+        <div class="col-12">
+          <h2 class="text-center">Get started with Voice Calling</h2>
+          <div class="text-center mb-10">
+            <button type="button" class="btn btn-success" id="join">
+              Join
+            </button>
+            <button type="button" class="btn btn-danger" id="leave">
+              Leave
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-6">
+          <div class="row">
+            <h2 class="">English Voice Calling Transcription</h2>
+            <button
+              type="button"
+              class="btn btn-info changeLang col-4"
+              data-lang="en"
+              id="changeLangEN"
+            >
+              Enable-En
+            </button>
+            <div id="transcripts-en"></div>
+            <p id="tentative-en"></p>
+          </div>
+          <br />
+          <div id="message-en"></div>
+        </div>
+        <div class="col-6">
+          <h2 class="">French Voice Calling Transcription</h2>
+          <div class="row">
+            <button
+              type="button"
+              class="btn btn-info changeLang col-4"
+              data-lang="fr"
+              id="changeLangFR"
+            >
+              Enable-FR
+            </button>
+            <div id="transcripts-fr"></div>
+            <p id="tentative-fr"></p>
+          </div>
+          <br />
+          <div id="message-fr"></div>
+        </div>
+      </div>
     </div>
-    <div id="transcripts"></div>
-    <p id="tentative"></p>
-  </div>
-  <br>
-  <div id="message"></div>
-</body>
+  </body>
 
-<script type="module">
-  // startRecording();
+  <script type="module">
+    // startRecording();
 
-  let user = '<%= userId %>'
-const selectElement = document.getElementById("mySelect");
+    let user = "<%= userId %>";
+    const selectElement = document.getElementById("mySelect");
 
-  var selectedLan = "en";
+    let mediaRecorder; // Declare mediaRecorder variable globally
 
-  selectElement.addEventListener("change", function () {
-  selectedLan = this.value;
-  console.log(selectedLan);
-  // Perform further actions with the selected value
-});
-
-
-  function startRecording(params) {
-    navigator.mediaDevices.getUserMedia({
-      audio: true
-    }).then((stream) => {
-      console.log({
-        stream
-      })
-      if (!MediaRecorder.isTypeSupported('audio/webm'))
-        return alert('Browser not supported')
-      const mediaRecorder = new MediaRecorder(stream, {
-        mimeType: 'audio/webm',
-      })
-      const socket = new WebSocket(`wss://api.deepgram.com/v1/listen?language=${selectedLan}`, [
-        'token',
-        '94508779e802ad285aee9c7468235ee39bab7989',
-      ])
-      socket.onopen = () => {
-        // document.querySelector('#status').textContent = 'Connected'
-        console.log({
-          event: 'onopen'
+    function startRecording(lang) {
+      navigator.mediaDevices
+        .getUserMedia({
+          audio: true,
         })
-        mediaRecorder.addEventListener('dataavailable', async (event) => {
-          console.log("test", event.data);
-          if (event.data.size > 0 && socket.readyState == 1) {
-            socket.send(event.data)
-          }
-        })
-        mediaRecorder.start(1000)
-      }
+        .then((stream) => {
+          if (!MediaRecorder.isTypeSupported("audio/webm"))
+            return alert("Browser not supported");
+          mediaRecorder = new MediaRecorder(stream, {
+            mimeType: "audio/webm",
+          });
+          const socket = new WebSocket(
+            `wss://api.deepgram.com/v1/listen?language=${lang}`,
+            ["token", "94508779e802ad285aee9c7468235ee39bab7989"]
+          );
+          socket.onopen = () => {
+            console.log({
+              event: "onopen",
+            });
+            mediaRecorder.addEventListener("dataavailable", async (event) => {
+              if (event.data.size > 0 && socket.readyState == 1) {
+                socket.send(event.data);
+              }
+            });
+            mediaRecorder.start(1000);
+          };
 
-      socket.onmessage = (message) => {
-        const received = JSON.parse(message.data)
-        const transcript = received.channel.alternatives[0].transcript
-        if (transcript && received.is_final) {
-          console.log(transcript)
-          // document.querySelector('#transcript').textContent += transcript + ' '
+          socket.onmessage = (message) => {
+            const received = JSON.parse(message.data);
+            if (
+              received &&
+              received.channel &&
+              received.channel.alternatives &&
+              received.channel.alternatives.length > 0
+            ) {
+              const transcript = received.channel.alternatives[0].transcript;
+              if (transcript && received.is_final) {
+                console.log(transcript);
+                if (document.getElementById(`${user}-${lang}`)) {
+                  document.getElementById(`${user}-${lang}`).innerHTML +=
+                    transcript + " ";
+                } else {
+                  document.getElementById(
+                    `transcripts-${lang}`
+                  ).innerHTML += `<div><label>${user}</label>: <p id="${user}-${lang}">${transcript}</p></div>`;
+                }
+              }
+            }
+          };
 
-          if (document.getElementById(`${user}`)) {
-            document.getElementById(`${user}`).innerHTML += transcript + ' ';
-          } else {
-            document.getElementById("transcripts").innerHTML += `<div><label>${user}</label>: <p id="${user}">${transcript}</p></div>`
-          }
-        }
-      }
+          socket.onclose = () => {
+            console.log({
+              event: "onclose",
+            });
+          };
 
-      socket.onclose = () => {
-        console.log({
-          event: 'onclose'
-        })
-      }
+          socket.onerror = (error) => {
+            console.log({
+              event: "onerror",
+              error,
+            });
+          };
 
-      socket.onerror = (error) => {
-        console.log({
-          event: 'onerror',
-          error
-        })
-      }
-    })
-  }
+          const changeLangButtons = document.querySelectorAll(".changeLang");
 
-  let options = {
-    // Pass your App ID here.
-    appId: '13696f494c8441f8b3f88fe0afcd940e',
-    // Set the channel name.
-    channel: 'voicedemo',
-    // Pass your temp token here.
-    token: '007eJxTYJheMD9bRfzeDvtAM+WMr8U77cy2Kn+eWuc2Kaef8YVE0l8FBkNjM0uzNBNLk2QLExPDNIsk4zQLi7RUg8S05BRLE4NUbZEVKQ2BjAylSlXMjAwQCOJzMpTlZyanpqTm5jMwAACBix+9',
-    // Set the user ID.
-    uid: "<%= userId %>",
-  };
+          changeLangButtons.forEach((changeLangButton) => {
+            changeLangButton.addEventListener("click", (event) => {
+              const lang = event.target.dataset.lang;
 
-  let channelParameters = {
-    // A variable to hold a local audio track.
-    localAudioTrack: null,
-    // A variable to hold a remote audio track.
-    remoteAudioTrack: null,
-    // A variable to hold the remote user id.
-    remoteUid: null,
-  };
-  async function startBasicCall() {
-    // Create an instance of the Agora Engine
-    const agoraEngine = AgoraRTC.createClient({
-      mode: "rtc",
-      codec: "vp9"
-    });
+              // Use the 'lang' value as needed
+              console.log(lang);
 
-    // Listen for the "user-published" event to retrieve an AgoraRTCRemoteUser object.
-    agoraEngine.on("user-published", async (user, mediaType) => {
-      // Subscribe to the remote user when the SDK triggers the "user-published" event.
-      await agoraEngine.subscribe(user, mediaType);
-      console.log("subscribe success");
+              if (mediaRecorder && mediaRecorder.state === "recording") {
+                mediaRecorder.stop();
+              }
+              if (socket.readyState === WebSocket.OPEN) {
+                socket.close();
+              }
+              startRecording(lang);
+            });
+          });
 
-      // Subscribe and play the remote audio track.
-      if (mediaType == "audio") {
-        channelParameters.remoteUid = user.uid;
-        // Get the RemoteAudioTrack object from the AgoraRTCRemoteUser object.
-        channelParameters.remoteAudioTrack = user.audioTrack;
+          // selectElement.addEventListener("change", function () {
+          //   selectedLan = this.value;
+          //   console.log(selectedLan);
 
-        console.log('check', user.audioTrack);
-        // Play the remote audio track.
-        channelParameters.remoteAudioTrack.play();
-        showMessage("Remote user connected: " + user.uid);
-      }
+          //   if (mediaRecorder && mediaRecorder.state === "recording") {
+          //     mediaRecorder.stop();
+          //   }
+          //   if (socket.readyState === WebSocket.OPEN) {
+          //     socket.close();
+          //   }
 
-      // Listen for the "user-unpublished" event.
-      agoraEngine.on("user-unpublished", user => {
-        console.log(user.uid + "has left the channel");
-        showMessage("Remote user has left the channel");
-      });
-    });
+          //   startRecording();
 
-    window.onload = function() {
-      // Listen to the Join button click event.
-      document.getElementById("join").onclick = async function() {
-        // Join a channel.
-        await agoraEngine.join(options.appId, options.channel, options.token, options.uid);
-        showMessage("Joined channel: " + options.channel);
-        // Create a local audio track from the microphone audio.
-        channelParameters.localAudioTrack = await AgoraRTC.createMicrophoneAudioTrack();
-        // Publish the local audio track in the channel.
-        await agoraEngine.publish(channelParameters.localAudioTrack);
-        console.log("Publish success!");
-        startRecording();
-      }
-
-      // Listen to the Leave button click event.
-      document.getElementById('leave').onclick = async function() {
-        // Destroy the local audio track.
-        channelParameters.localAudioTrack.close();
-        // Leave the channel
-        await agoraEngine.leave();
-        console.log("You left the channel");
-        // Refresh the page for reuse
-        window.location.reload();
-      }
+          //   // Perform further actions with the selected value
+          // });
+        });
     }
-  }
 
-  function showMessage(text) {
-    document.getElementById("message").textContent = text;
-  }
+    let options = {
+      // Pass your App ID here.
+      appId: "13696f494c8441f8b3f88fe0afcd940e",
+      // Set the channel name.
+      channel: "voicedemo",
+      // Pass your temp token here.
+      token:
+        "007eJxTYDikxT5h6V7NpMu3T9T8Wb76wzHLB/GBDGtDI0/tEntYmFCqwGBobGZplmZiaZJsYWJimGaRZJxmYZGWapCYlpxiaWKQ6jhtdUpDICPDq5CHLIwMEAjiczKU5Wcmp6ak5uYzMAAAl2kj2Q==",
+      // Set the user ID.
+      uid: "<%= userId %>",
+    };
 
-  startBasicCall();
-</script>
+    let channelParameters = {
+      // A variable to hold a local audio track.
+      localAudioTrack: null,
+      // A variable to hold a remote audio track.
+      remoteAudioTrack: null,
+      // A variable to hold the remote user id.
+      remoteUid: null,
+    };
+    async function startBasicCall() {
+      // Create an instance of the Agora Engine
+      const agoraEngine = AgoraRTC.createClient({
+        mode: "rtc",
+        codec: "vp9",
+      });
 
+      // Listen for the "user-published" event to retrieve an AgoraRTCRemoteUser object.
+      agoraEngine.on("user-published", async (user, mediaType) => {
+        // Subscribe to the remote user when the SDK triggers the "user-published" event.
+        await agoraEngine.subscribe(user, mediaType);
+        console.log("subscribe success");
+
+        // Subscribe and play the remote audio track.
+        if (mediaType == "audio") {
+          channelParameters.remoteUid = user.uid;
+          // Get the RemoteAudioTrack object from the AgoraRTCRemoteUser object.
+          channelParameters.remoteAudioTrack = user.audioTrack;
+
+          console.log("check", user.audioTrack);
+          // Play the remote audio track.
+          channelParameters.remoteAudioTrack.play();
+          showMessage("Remote user connected: " + user.uid);
+        }
+
+        // Listen for the "user-unpublished" event.
+        agoraEngine.on("user-unpublished", (user) => {
+          console.log(user.uid + "has left the channel");
+          showMessage("Remote user has left the channel");
+        });
+      });
+
+      window.onload = function () {
+        // Listen to the Join button click event.
+        document.getElementById("join").onclick = async function () {
+          // Join a channel.
+          await agoraEngine.join(
+            options.appId,
+            options.channel,
+            options.token,
+            options.uid
+          );
+          showMessage("Joined channel: " + options.channel);
+          // Create a local audio track from the microphone audio.
+          channelParameters.localAudioTrack =
+            await AgoraRTC.createMicrophoneAudioTrack();
+          // Publish the local audio track in the channel.
+          await agoraEngine.publish(channelParameters.localAudioTrack);
+          console.log("Publish success!");
+          startRecording("en");
+        };
+
+        // Listen to the Leave button click event.
+        document.getElementById("leave").onclick = async function () {
+          // Destroy the local audio track.
+          channelParameters.localAudioTrack.close();
+          // Leave the channel
+          await agoraEngine.leave();
+          console.log("You left the channel");
+          // Refresh the page for reuse
+          window.location.reload();
+        };
+      };
+    }
+
+    function showMessage(text) {
+      document.getElementById(`message-en`).textContent = text;
+    }
+
+    startBasicCall();
+  </script>
 </html>
