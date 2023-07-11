@@ -178,7 +178,7 @@
     uid: user,
   };
   async function setAgoraToken() {
-    let res = await fetch(`/call-demo/get-agora-token?uid=${user}&channelName='voicedemo'`);
+    let res = await fetch(`/call-demo/get-agora-token?uid=${user}&channelName=voicedemo`);
     let response = await res.json();
     options.token = response.token
   }
@@ -229,7 +229,6 @@
       // Listen to the Join button click event.
       document.getElementById("join").onclick = async function() {
         // Join a channel.
-        console.log("clicked", options);
         await agoraEngine.join(
           options.appId,
           options.channel,
