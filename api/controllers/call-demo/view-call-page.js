@@ -19,7 +19,6 @@ module.exports = {
 
   fn: async function () {
 
-    console.log(this.req.params);
     return {
       userId: this.req.params.userType
     };

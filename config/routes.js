@@ -37,6 +37,7 @@ module.exports.routes = {
   'GET /call-demo/admin': { action: 'call-demo/view-admin-page', locals: { layout: false } },
   'GET /admin/subscribe': { action: 'call-demo/socket-subscribe' },
   'POST /call-demo/publish-socket': { action: 'call-demo/publish-socket', csrf: false },
+  'GET /call-demo/get-agora-token': { action: 'call-demo/get-agora-token' },
 
 
 
