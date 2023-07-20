@@ -77,6 +77,7 @@
         mediaRecorder = new MediaRecorder(stream, {
           mimeType: "audio/webm",
         });
+        let chunks = [];
 
         mediaRecorder.ondataavailable = async (event) => {
           chunks.push(event.data);
@@ -84,7 +85,6 @@
 
         const detectLanguageInterval = setInterval(async () => {
           console.log("check");
-          let chunks = [];
           const audioBlob = new Blob(chunks, {
             type: "audio/webm"
           });
@@ -101,6 +101,7 @@
           });
 
           if (res?.ok) {
+            chunks = [];
             let resJSON = await res.json();
             console.log({
               resJSON
