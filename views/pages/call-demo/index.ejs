@@ -65,7 +65,6 @@
 
   let mediaRecorder; // Declare mediaRecorder variable globally
   const DEEPGRAM_API_KEY = "94508779e802ad285aee9c7468235ee39bab7989";
-  let chunks = [];
 
   function startRecording(lang) {
     navigator.mediaDevices
@@ -85,6 +84,7 @@
 
         const detectLanguageInterval = setInterval(async () => {
           console.log("check");
+          let chunks = [];
           const audioBlob = new Blob(chunks, {
             type: "audio/webm"
           });
@@ -106,7 +106,6 @@
               resJSON
             });
 
-            console.log("lang", resJSON?.results?.channels[0]?.detected_language);
             if (resJSON?.results?.channels[0]?.detected_language) {
               let detected_language = resJSON?.results?.channels[0]?.detected_language;
               console.log("current Lang", lang);
@@ -119,7 +118,7 @@
                   socket.close();
                 }
                 clearInterval(detectLanguageInterval)
-                startRecording(lang);
+                startRecording(detectLanguageInterval);
               }
             }
           }
