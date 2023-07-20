@@ -81,7 +81,7 @@
           mimeType: "audio/webm",
         });
 
-        const detectLanguageInterval = setInterval(async () => {
+        const detectLanguageInterval = setTimeout(async () => {
           console.log("new chunk", chunks?.length);
           if (chunks?.length) {
             const audioBlob = new Blob(chunks, {
@@ -95,9 +95,8 @@
             });
             audioPlayer.src = audioUrl;
 
-            console.log("new audio duration",audioPlayer.duration);
-            if (audioPlayer.duration) {
-            }
+            console.log("new audio duration", audioPlayer.duration);
+            if (audioPlayer.duration) {}
             let res = await fetch(`https://api.deepgram.com/v1/listen?detect_language=true&punctuate=true`, {
               method: 'POST',
               headers: {
@@ -124,14 +123,13 @@
                   if (socket.readyState === WebSocket.OPEN) {
                     socket.close();
                   }
-                  clearInterval(detectLanguageInterval)
-                  startRecording(detectLanguageInterval);
+                  // clearInterval(detectLanguageInterval);
+                  startRecording(detected_language);
                 }
               }
             }
-            chunks = [];
           }
-        }, 10000);
+        }, 5000);
 
         // mediaRecorder.onstop = () => {
         //   const audioBlob = new Blob(chunks, { type: "audio/webm" });
