@@ -25,6 +25,7 @@
           <button type="button" class="btn btn-danger" id="leave">
             Leave
           </button>
+          <audio controls id="audioPlayer"></audio>
         </div>
       </div>
     </div>
@@ -65,8 +66,10 @@
 
   let mediaRecorder; // Declare mediaRecorder variable globally
   const DEEPGRAM_API_KEY = "94508779e802ad285aee9c7468235ee39bab7989";
-
+  const audioPlayer = document.getElementById("audioPlayer");
+  
   function startRecording(lang) {
+    let chunks = [];
     navigator.mediaDevices
       .getUserMedia({
         audio: true,
@@ -77,53 +80,58 @@
         mediaRecorder = new MediaRecorder(stream, {
           mimeType: "audio/webm",
         });
-        let chunks = [];
-
-        mediaRecorder.ondataavailable = async (event) => {
-          chunks.push(event.data);
-        };
 
         const detectLanguageInterval = setInterval(async () => {
-          console.log("check");
-          const audioBlob = new Blob(chunks, {
-            type: "audio/webm"
-          });
-
-          let audioData = new File([audioBlob], 'recording.ogg');
-
-          let res = await fetch(`https://api.deepgram.com/v1/listen?detect_language=true&punctuate=true`, {
-            method: 'POST',
-            headers: {
-              'Authorization': `Token ${DEEPGRAM_API_KEY}`,
-              'Content-Type': 'audio/mp3',
-            },
-            body: audioData,
-          });
-
-          if (res?.ok) {
-            chunks = [];
-            let resJSON = await res.json();
-            console.log({
-              resJSON
+          console.log("new chunk", chunks?.length);
+          if (chunks?.length) {
+            const audioBlob = new Blob(chunks, {
+              type: "audio/webm"
             });
 
-            if (resJSON?.results?.channels[0]?.detected_language) {
-              let detected_language = resJSON?.results?.channels[0]?.detected_language;
-              console.log("current Lang", lang);
-              console.log("detected lang", detected_language);
-              if (lang != detected_language) {
-                if (mediaRecorder && mediaRecorder.state === "recording") {
-                  mediaRecorder.stop();
+            let audioData = new File([audioBlob], `recording-${new Date()}.ogg`);
+            const audioUrl = URL.createObjectURL(audioBlob);
+            console.log({
+              audioUrl
+            });
+            audioPlayer.src = audioUrl;
+
+            console.log("new audio duration",audioPlayer.duration);
+            if (audioPlayer.duration) {
+            }
+            let res = await fetch(`https://api.deepgram.com/v1/listen?detect_language=true&punctuate=true`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Token ${DEEPGRAM_API_KEY}`,
+                'Content-Type': 'audio/mp3',
+              },
+              body: audioData,
+            });
+
+            if (res?.ok) {
+              let resJSON = await res.json();
+              console.log({
+                resJSON
+              });
+
+              if (resJSON?.results?.channels[0]?.detected_language) {
+                let detected_language = resJSON?.results?.channels[0]?.detected_language;
+                console.log("current Lang", lang);
+                console.log("detected lang", detected_language);
+                if (lang != detected_language) {
+                  if (mediaRecorder && mediaRecorder.state === "recording") {
+                    mediaRecorder.stop();
+                  }
+                  if (socket.readyState === WebSocket.OPEN) {
+                    socket.close();
+                  }
+                  clearInterval(detectLanguageInterval)
+                  startRecording(detectLanguageInterval);
                 }
-                if (socket.readyState === WebSocket.OPEN) {
-                  socket.close();
-                }
-                clearInterval(detectLanguageInterval)
-                startRecording(detectLanguageInterval);
               }
             }
+            chunks = [];
           }
-        }, 5000);
+        }, 10000);
 
         // mediaRecorder.onstop = () => {
         //   const audioBlob = new Blob(chunks, { type: "audio/webm" });
@@ -140,6 +148,10 @@
             event: "onopen",
           });
           mediaRecorder.addEventListener("dataavailable", async (event) => {
+            console.log(chunks.length);
+            if (event.data.size > 0) {
+              chunks.push(event.data);
+            }
             if (event.data.size > 0 && socket.readyState == 1) {
               socket.send(event.data);
             }
