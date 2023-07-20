@@ -41,7 +41,7 @@ module.exports = {
 
     // Build token with uid
     const token = RtcTokenBuilder.buildTokenWithUid(appID, appCertificate, channelName, uid, role, privilegeExpiredTs);
-    console.log("Token With Integer Number Uid: " + token);
+    // console.log("Token With Integer Number Uid: " + token);
 
     // Build token with user account
     // const tokenB = RtcTokenBuilder.buildTokenWithAccount(appID, appCertificate, channelName, account, role, privilegeExpiredTs);

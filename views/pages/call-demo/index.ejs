@@ -64,6 +64,8 @@
   const selectElement = document.getElementById("mySelect");
 
   let mediaRecorder; // Declare mediaRecorder variable globally
+  const DEEPGRAM_API_KEY = "94508779e802ad285aee9c7468235ee39bab7989";
+  let chunks = [];
 
   function startRecording(lang) {
     navigator.mediaDevices
@@ -76,9 +78,43 @@
         mediaRecorder = new MediaRecorder(stream, {
           mimeType: "audio/webm",
         });
+
+        mediaRecorder.ondataavailable = async (event) => {
+          chunks.push(event.data);
+        };
+
+        setTimeout(async () => {
+          console.log("check");
+          const audioBlob = new Blob(chunks, {
+            type: "audio/webm"
+          });
+
+          let audioData = new File([audioBlob], 'recording.ogg');
+
+          let res = await fetch(`https://api.deepgram.com/v1/listen?detect_language=true&punctuate=true`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Token ${DEEPGRAM_API_KEY}`,
+              'Content-Type': 'audio/mp3',
+            },
+            body: audioData,
+          });
+
+          let resJSON = await res.json();
+          console.log({
+            resJSON
+          });
+        }, 5000);
+
+        // mediaRecorder.onstop = () => {
+        //   const audioBlob = new Blob(chunks, { type: "audio/webm" });
+        //   const audioUrl = URL.createObjectURL(audioBlob);
+        //   audioPlayer.src = audioUrl;
+        // };
+
         const socket = new WebSocket(
           `wss://api.deepgram.com/v1/listen?language=${lang}`,
-          ["token", "94508779e802ad285aee9c7468235ee39bab7989"]
+          ["token", DEEPGRAM_API_KEY]
         );
         socket.onopen = () => {
           console.log({
@@ -102,7 +138,7 @@
           ) {
             const transcript = received.channel.alternatives[0].transcript;
             if (transcript && received.is_final) {
-              console.log(transcript);
+              // console.log(transcript);
               if (document.getElementById(`${user}-${lang}`)) {
                 document.getElementById(`${user}-${lang}`).innerHTML +=
                   transcript + " ";
