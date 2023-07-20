@@ -83,7 +83,7 @@
         });
 
         if (!languageDetected) {
-          const detectLanguageInterval = setTimeout(async () => {
+          const detectLanguageInterval = setInterval(async () => {
             console.log("new chunk", chunks?.length);
             if (chunks?.length) {
               const audioBlob = new Blob(chunks, {
@@ -109,7 +109,6 @@
               });
   
               if (res?.ok) {
-                languageDetected = true;
                 let resJSON = await res.json();
                 console.log({
                   resJSON
@@ -117,8 +116,16 @@
   
                 if (resJSON?.results?.channels[0]?.detected_language) {
                   let detected_language = resJSON?.results?.channels[0]?.detected_language;
+                  let transcript = resJSON?.results?.channels[0]?.alternatives[0]?.transcript;
                   console.log("current Lang", lang);
                   console.log("detected lang", detected_language);
+
+                  if (detected_language && transcript) {
+                    console.log("stop detecting");
+                    languageDetected = true;
+                    clearInterval(detectLanguageInterval);
+                  }
+                  
                   if (lang != detected_language) {
                     if (mediaRecorder && mediaRecorder.state === "recording") {
                       mediaRecorder.stop();
