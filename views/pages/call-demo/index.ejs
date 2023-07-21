@@ -25,24 +25,24 @@
           <button type="button" class="btn btn-danger" id="leave">
             Leave
           </button>
-          <audio controls id="audioPlayer"></audio>
+          <audio controls id="audioPlayer" hidden></audio>
         </div>
       </div>
     </div>
     <div class="row">
       <div class="col-6">
         <div class="row">
-          <h2 class="">English Voice Calling Transcription</h2>
-          <button type="button" class="btn btn-info changeLang col-4" data-lang="en" id="changeLangEN">
+          <h2 class="">Voice Calling Transcription</h2>
+          <!-- <button type="button" class="btn btn-info changeLang col-4" data-lang="en" id="changeLangEN">
             Enable-En
-          </button>
-          <div id="transcripts-en"></div>
-          <p id="tentative-en"></p>
+          </button> -->
+          <div id="transcripts"></div>
+          <p id="tentative"></p>
         </div>
         <br />
-        <div id="message-en"></div>
+        <div id="message"></div>
       </div>
-      <div class="col-6">
+      <!-- <div class="col-6">
         <h2 class="">French Voice Calling Transcription</h2>
         <div class="row">
           <button type="button" class="btn btn-info changeLang col-4" data-lang="fr" id="changeLangFR">
@@ -53,7 +53,7 @@
         </div>
         <br />
         <div id="message-fr"></div>
-      </div>
+      </div> -->
     </div>
   </div>
 </body>
@@ -68,7 +68,7 @@
   const DEEPGRAM_API_KEY = "94508779e802ad285aee9c7468235ee39bab7989";
   const audioPlayer = document.getElementById("audioPlayer");
   let languageDetected = false;
-  
+
   function startRecording(lang) {
     let chunks = [];
     navigator.mediaDevices
@@ -89,14 +89,14 @@
               const audioBlob = new Blob(chunks, {
                 type: "audio/webm"
               });
-  
+
               let audioData = new File([audioBlob], `recording-${new Date()}.ogg`);
               const audioUrl = URL.createObjectURL(audioBlob);
               console.log({
                 audioUrl
               });
               audioPlayer.src = audioUrl;
-  
+
               console.log("new audio duration", audioPlayer.duration);
               if (audioPlayer.duration) {}
               let res = await fetch(`https://api.deepgram.com/v1/listen?detect_language=true&punctuate=true`, {
@@ -107,13 +107,13 @@
                 },
                 body: audioData,
               });
-  
+
               if (res?.ok) {
                 let resJSON = await res.json();
                 console.log({
                   resJSON
                 });
-  
+
                 if (resJSON?.results?.channels[0]?.detected_language) {
                   let detected_language = resJSON?.results?.channels[0]?.detected_language;
                   let transcript = resJSON?.results?.channels[0]?.alternatives[0]?.transcript;
@@ -123,9 +123,17 @@
                   if (detected_language && transcript) {
                     console.log("stop detecting");
                     languageDetected = true;
+                    if (document.getElementById(`${user}`)) {
+                document.getElementById(`${user}`).innerHTML +=
+                  transcript + " ";
+                  } else {
+                    document.getElementById(
+                      `transcripts`
+                    ).innerHTML += `<div><label>${user}</label>: <p id="${user}">${transcript}</p></div>`;
+                  }
                     clearInterval(detectLanguageInterval);
                   }
-                  
+
                   if (lang != detected_language) {
                     if (mediaRecorder && mediaRecorder.state === "recording") {
                       mediaRecorder.stop();
@@ -139,7 +147,7 @@
                 }
               }
             }
-          }, 5000);
+          }, 3000);
         }
 
 
@@ -179,14 +187,14 @@
           ) {
             const transcript = received.channel.alternatives[0].transcript;
             if (transcript && received.is_final) {
-              // console.log(transcript);
-              if (document.getElementById(`${user}-${lang}`)) {
-                document.getElementById(`${user}-${lang}`).innerHTML +=
+              console.log(transcript);
+              if (document.getElementById(`${user}`)) {
+                document.getElementById(`${user}`).innerHTML +=
                   transcript + " ";
               } else {
                 document.getElementById(
-                  `transcripts-${lang}`
-                ).innerHTML += `<div><label>${user}</label>: <p id="${user}-${lang}">${transcript}</p></div>`;
+                  `transcripts`
+                ).innerHTML += `<div><label>${user}</label>: <p id="${user}">${transcript}</p></div>`;
               }
             }
           }
@@ -336,7 +344,7 @@
   }
 
   function showMessage(text) {
-    document.getElementById(`message-en`).textContent = text;
+    document.getElementById(`message`).textContent = text;
   }
 
   startBasicCall();
